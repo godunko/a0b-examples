@@ -1,0 +1,62 @@
+--
+--  Copyright (C) 2024, Vadim Godunko <vgodunko@gmail.com>
+--
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+--
+
+with "../blackpill_stm32f401/config/pca9685_ps2c_servo_blackpill_stm32f401_config.gpr";
+
+with "a0b_common.gpr";
+with "light_blackpill_stm32f401";
+
+project BlackPill_STM32F401 is
+
+   for Target use Light_Blackpill_STM32F401'Target;
+   for Runtime use Light_Blackpill_STM32F401'Runtime;
+
+   for Main use ("pca9685_ps2c_servo-driver.adb");
+
+   for Source_Dirs use
+     ("../source",
+      "../source/blackpill_stm32f401");
+   for Object_Dir use "../.objs/" & A0B_Common.Object_Dir_Suffix & "/blackpill_stm32f401";
+   for Exec_Dir use "../bin";
+
+   package Compiler is
+      for Switches ("Ada") use A0B_Common.Compiler_Switches_Ada;
+   end Compiler;
+
+   package Builder is
+      for Executable ("pca9685_ps2c_servo-driver.adb") use "blackpill_stm32f401.elf";
+   end Builder;
+
+   package Linker is
+      for Switches ("Ada") use
+        Light_Blackpill_STM32F401.Linker_Switches
+         & ("-Wl,--gc-sections");
+   end Linker;
+
+end BlackPill_STM32F401;
+--   for Languages use ("Ada");
+--
+--   Target := Project'Target;
+--
+--
+--   for Source_Dirs use
+--     ("../source/blackpill_stm32f401",
+--      "../source/hexapod",
+--      "../source/legs",
+--      "../subprojects/b2f4a/source",
+--      "../subprojects/b2f4a/source/drivers/",
+--      "../subprojects/b2f4a/source/sandbox");
+--
+--   package Compiler renames Phoenyx_Common.Compiler;
+--
+--   package IDE is
+--      for Program_Host use "localhost:3333";
+--      for Communication_Protocol use "extended-remote";
+--      for Connection_Tool use "openocd";
+--      for Connection_Config_File use "../blackpill_stm32f401/openocd.cfg";
+--   end IDE;
+--
+--end BlackPill_STM32F401;
