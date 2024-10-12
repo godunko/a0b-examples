@@ -1,0 +1,25 @@
+name = "mpu9250_calibration_blackpill_stm32f401"
+description = "A0B: MPU9250 Calibration Tool for BlackPill STM32F401"
+version = "0.1.0-dev"
+
+authors = ["Vadim Godunko"]
+maintainers = ["Vadim Godunko <vgodunko@gmail.com>"]
+maintainers-logins = ["godunko"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+tags = ["a0b", "embedded", "mpu9250"]
+
+project-files = ["../gnat/blackpill_stm32f401.gpr"]
+
+[configuration]
+generate_ada = false
+generate_c = false
+generate_gpr = true
+
+[[depends-on]]
+a0b_armv7m_systick_clock = "*"
+a0b_base = "*"
+a0b_mpuxxxx = "*"
+a0b_stm32f401_i2c = "*"
+a0b_stm32f401_usart = "*"
+a0b_stm32f401_tim11_timer = "*"
+light_blackpill_stm32f401 = "*"
