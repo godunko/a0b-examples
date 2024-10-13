@@ -4,136 +4,29 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-with A0B.Callbacks.Generic_Parameterless;
-with A0B.STM32F401.USART;
+--  with A0B.Callbacks.Generic_Parameterless;
+with A0B.MPUXXXX;
 
+with Awaits;
+with Console;
 with MPU9250_Calibration.Configuration;
 
 package body MPU9250_Calibration.UI is
-
-   package Awaits is
-
-      function Create_Callback return A0B.Callbacks.Callback;
-
-      procedure Suspend_Until_Callback;
-
-   end Awaits;
-
-   procedure Put (Item : String);
-
-   procedure Get (Item : out Character);
-
-   ------------
-   -- Awaits --
-   ------------
-
-   package body Awaits is
-
-      procedure On_Callback;
-
-      package On_Callback_Callbacks is
-        new A0B.Callbacks.Generic_Parameterless (On_Callback);
-
-      Flag : Boolean with Volatile;
-
-      ---------------------
-      -- Create_Callback --
-      ---------------------
-
-      function Create_Callback return A0B.Callbacks.Callback is
-      begin
-         Flag := False;
-
-         return On_Callback_Callbacks.Create_Callback;
-      end Create_Callback;
-
-      -----------------
-      -- On_Callback --
-      -----------------
-
-      procedure On_Callback is
-      begin
-         Flag := True;
-      end On_Callback;
-
-      ----------------------------
-      -- Suspend_Until_Callback --
-      ----------------------------
-
-      procedure Suspend_Until_Callback is
-      begin
-         while not Flag loop
-            null;
-         end loop;
-      end Suspend_Until_Callback;
-
-   end Awaits;
-
-   ---------
-   -- Get --
-   ---------
-
-   procedure Get (Item : out Character) is
-      Buffers : A0B.STM32F401.USART.Buffer_Descriptor_Array (0 .. 0);
-      Success : Boolean := True;
-
-   begin
-     Buffers (0) :=
-        (Address     => Item'Address,
-         Size        => 1,
-         Transferred => <>,
-         State       => <>);
-
-      MPU9250_Calibration.Configuration.UART1.USART1_Asynchronous.Receive
-        (Buffers  => Buffers,
-         Finished => Awaits.Create_Callback,
-         Success  => Success);
-
-      if Success then
-         Awaits.Suspend_Until_Callback;
-      end if;
-   end Get;
-
-   ---------
-   -- Put --
-   ---------
-
-   procedure Put (Item : String) is
-      Buffers : A0B.STM32F401.USART.Buffer_Descriptor_Array (0 .. 0);
-      Success : Boolean := True;
-
-   begin
-      Buffers (0) :=
-        (Address     => Item (Item'First)'Address,
-         Size        => Item'Length,
-         Transferred => <>,
-         State       => <>);
-
-      MPU9250_Calibration.Configuration.UART1.USART1_Asynchronous.Transmit
-        (Buffers  => Buffers,
-         Finished => Awaits.Create_Callback,
-         Success  => Success);
-
-      if Success then
-         Awaits.Suspend_Until_Callback;
-      end if;
-   end Put;
 
    ---------
    -- Run --
    ---------
 
    procedure Run is
-      Hello   : constant String := "Hello!" & ASCII.CR & ASCII.LF;
-      Message : constant String := "MPU9250 Calibrartion Utility" & ASCII.CR & ASCII.LF;
+      Message : constant String := "MPU9250 Calibrartion Utility";
       Command : Character;
 
    begin
-      Put (Hello);
-      Put (Message);
+      Console.Put_Line (Message);
+      Console.New_Line;
 
       loop
-         Get (Command);
+         Console.Get (Command);
 
          case Command is
             when 'i' | 'I' =>
@@ -145,21 +38,52 @@ package body MPU9250_Calibration.UI is
                     (Finished => Awaits.Create_Callback,
                      Success  => Success);
 
-                  if Success then
-                     Awaits.Suspend_Until_Callback;
+                  Awaits.Suspend_Until_Callback (Success);
 
-                     Put ("Initialized" & ASCII.CR & ASCII.LF);
+                  if Success then
+                     Console.Put_Line ("IMU: initialized");
 
                   else
-                     Put ("Initialization failed" & ASCII.CR & ASCII.LF);
+                     Console.Put_Line ("IMU: initialization failed");
+                  end if;
+
+                  MPU9250_Calibration.Configuration.IMU.Configure
+                    (Accelerometer_Range => A0B.MPUXXXX.FSR_16G,
+                     Gyroscope_Range     => A0B.MPUXXXX.FSR_2000DPS,
+                     Temperature         => True,
+                     Filter              => True,
+                     Sample_Rate         => 50,
+                     Finished            => Awaits.Create_Callback,
+                     Success             => Success);
+
+                  Awaits.Suspend_Until_Callback (Success);
+
+                  if Success then
+                     Console.Put ("IMU: configured");
+
+                  else
+                     Console.Put ("IMU: configuration failed");
+                  end if;
+
+                  MPU9250_Calibration.Configuration.IMU.Enable
+                    (Finished => Awaits.Create_Callback,
+                     Success  => Success);
+
+                  Awaits.Suspend_Until_Callback (Success);
+
+                  if Success then
+                     Console.Put_Line ("IMU: enabled");
+
+                  else
+                     Console.Put_Line ("IMU: enable failed");
                   end if;
                end;
 
             when 'q' | 'Q' =>
-               Put ("It works, thanks!" & ASCII.CR & ASCII.LF);
+               Console.Put_Line ("It works, thanks!");
 
             when others =>
-               Put ("Unknown command" & ASCII.CR & ASCII.LF);
+               Console.Put_Line ("Unknown command");
          end case;
       end loop;
    end Run;

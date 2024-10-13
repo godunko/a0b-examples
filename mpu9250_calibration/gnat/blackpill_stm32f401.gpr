@@ -18,7 +18,9 @@ project BlackPill_STM32F401 is
 
    for Source_Dirs use
      ("../source",
-      "../source/blackpill_stm32f401");
+      "../source/blackpill_stm32f401",
+      "../../source",
+      "../../source/non-tasking");
    for Object_Dir use "../.objs/" & A0B_Common.Object_Dir_Suffix & "/blackpill_stm32f401";
    for Exec_Dir use "../bin";
 
