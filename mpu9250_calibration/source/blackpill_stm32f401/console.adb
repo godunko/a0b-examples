@@ -4,6 +4,8 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
+pragma Restrictions (No_Elaboration_Code);
+
 with A0B.STM32F401.USART;
 
 with Awaits;

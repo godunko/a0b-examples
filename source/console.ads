@@ -6,6 +6,8 @@
 
 --  Console API
 
+pragma Restrictions (No_Elaboration_Code);
+
 package Console is
 
    procedure Put (Item : Character);
