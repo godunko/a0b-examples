@@ -7,6 +7,7 @@
 pragma Ada_2022;
 
 with Ada.Unchecked_Conversion;
+with Interfaces;
 
 with A0B.Callbacks.Generic_Parameterless;
 with A0B.MPUXXXX;
@@ -189,6 +190,12 @@ package body MPU9250_Calibration.UI is
          case Command is
             when 'g' | 'G' =>
                declare
+                  use type Interfaces.IEEE_Float_64;
+
+                  Gyroscope_U_Integrated : Interfaces.IEEE_Float_64;
+                  Gyroscope_V_Integrated : Interfaces.IEEE_Float_64;
+                  Gyroscope_W_Integrated : Interfaces.IEEE_Float_64;
+
                   Timeout : aliased A0B.Timer.Timeout_Control_Block;
                   Success : Boolean := True;
 
@@ -230,11 +237,22 @@ package body MPU9250_Calibration.UI is
                      exit when Done;
                   end loop;
 
+                  Gyroscope_U_Integrated := 0.0;
+                  Gyroscope_V_Integrated := 0.0;
+                  Gyroscope_W_Integrated := 0.0;
+
                   Console.Put_Line (" done.");
 
                   Console.New_Line;
 
                   for Item of Data loop
+                     Gyroscope_U_Integrated :=
+                       @ + Interfaces.IEEE_Float_64 (Item.Data.Velocity_U) * (1.0 / 50.0);
+                     Gyroscope_V_Integrated :=
+                       @ + Interfaces.IEEE_Float_64 (Item.Data.Velocity_V) * (1.0 / 50.0);
+                     Gyroscope_W_Integrated :=
+                       @ + Interfaces.IEEE_Float_64 (Item.Data.Velocity_W) * (1.0 / 50.0);
+
                      Console.Put
                        (A0B.Types.Unsigned_64'Image
                           (A0B.Time.To_Nanoseconds (Item.Timestamp)));
@@ -261,6 +279,10 @@ package body MPU9250_Calibration.UI is
                           (Item.Data.Temperature));
                      Console.New_Line;
                   end loop;
+
+                  Console.Put (Interfaces.IEEE_Float_64'Image (Gyroscope_U_Integrated));
+                  Console.Put (Interfaces.IEEE_Float_64'Image (Gyroscope_V_Integrated));
+                  Console.Put (Interfaces.IEEE_Float_64'Image (Gyroscope_W_Integrated));
 
                   Console.New_Line;
                end;
