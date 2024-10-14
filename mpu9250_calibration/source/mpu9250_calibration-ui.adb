@@ -92,7 +92,7 @@ package body MPU9250_Calibration.UI is
       Calibration_Gyroscope_W_Accumulated :=
         @ + A0B.Types.Integer_64 (To_I32 (Data.Velocity_W));
 
-      if Calibration_Count >= 10_000 then
+      if Calibration_Count >= 1_000 then
          MPU9250_Calibration.Configuration.IMU.Disable
            (Finished => On_Done_Callbacks.Create_Callback,
             Success  => Success);
@@ -312,6 +312,9 @@ package body MPU9250_Calibration.UI is
                   Timeout          : aliased A0B.Timer.Timeout_Control_Block;
                   Success          : Boolean := True;
 
+                  Accelerometer_Precision : constant := 2 ** 3;
+                  Gyroscope_Precision     : constant := 2 ** 2 * 1_000;
+
                begin
                   --  Get active calibration information
 
@@ -416,6 +419,12 @@ package body MPU9250_Calibration.UI is
                     (A0B.Types.Integer_64'Image (Calibration_Accelerometer_Y_Accumulated));
                   Console.Put
                     (A0B.Types.Integer_64'Image (Calibration_Accelerometer_Z_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_U_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_V_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_W_Accumulated));
                   Console.New_Line;
 
                   Calibration_Accelerometer_X_Accumulated :=
@@ -442,6 +451,16 @@ package body MPU9250_Calibration.UI is
                     (A0B.Types.Integer_64'Image (Calibration_Accelerometer_Y_Accumulated));
                   Console.Put
                     (A0B.Types.Integer_64'Image (Calibration_Accelerometer_Z_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_U_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_V_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Calibration_Gyroscope_W_Accumulated));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Accelerometer_Precision));
+                  Console.Put
+                    (A0B.Types.Integer_64'Image (Gyroscope_Precision));
                   Console.New_Line;
 
 
@@ -475,34 +494,57 @@ package body MPU9250_Calibration.UI is
                     (A0B.MPUXXXX.Angular_Velosity'Image
                        (-To_AV
                           (A0B.Types.Integer_32
-                             (Calibration_Gyroscope_W_Accumulated))));
+                                 (Calibration_Gyroscope_W_Accumulated))));
+
+                  if abs Calibration_Accelerometer_X_Accumulated > Accelerometer_Precision then
+                     Console.Put (" AX");
+                     Acceleration_X :=
+                       @ - To_GA
+                             (A0B.Types.Integer_32
+                                (Calibration_Accelerometer_X_Accumulated));
+                  end if;
+
+                  if abs Calibration_Accelerometer_Y_Accumulated > Accelerometer_Precision then
+                     Console.Put (" AY");
+                     Acceleration_Y :=
+                       @ - To_GA
+                             (A0B.Types.Integer_32
+                                (Calibration_Accelerometer_Y_Accumulated));
+                  end if;
+
+                  if abs Calibration_Accelerometer_Z_Accumulated > Accelerometer_Precision then
+                     Console.Put (" AZ");
+                     Acceleration_Z :=
+                       @ - To_GA
+                             (A0B.Types.Integer_32
+                                (Calibration_Accelerometer_Z_Accumulated));
+                  end if;
+
+                  if abs Calibration_Gyroscope_U_Accumulated > Gyroscope_Precision then
+                     Console.Put (" VU");
+                     Velocity_U :=
+                       @ - To_AV
+                             (A0B.Types.Integer_32
+                                (Calibration_Gyroscope_U_Accumulated));
+                  end if;
+
+                  if abs Calibration_Gyroscope_V_Accumulated > Gyroscope_Precision then
+                     Console.Put (" VV");
+                     Velocity_V :=
+                       @ - To_AV
+                             (A0B.Types.Integer_32
+                                (Calibration_Gyroscope_V_Accumulated));
+                  end if;
+
+                  if abs Calibration_Gyroscope_W_Accumulated > Gyroscope_Precision then
+                     Console.Put (" VW");
+                     Velocity_W :=
+                       @ - To_AV
+                             (A0B.Types.Integer_32
+                                (Calibration_Gyroscope_W_Accumulated));
+                  end if;
+
                   Console.New_Line;
-
-                  Acceleration_X :=
-                    @ - To_GA
-                          (A0B.Types.Integer_32
-                             (Calibration_Accelerometer_X_Accumulated));
-                  Acceleration_Y :=
-                    @ - To_GA
-                          (A0B.Types.Integer_32
-                             (Calibration_Accelerometer_Y_Accumulated));
-                  Acceleration_Z :=
-                    @ - To_GA
-                          (A0B.Types.Integer_32
-                             (Calibration_Accelerometer_Z_Accumulated));
-
-                  Velocity_U :=
-                    @ - To_AV
-                          (A0B.Types.Integer_32
-                             (Calibration_Gyroscope_U_Accumulated));
-                  Velocity_V :=
-                    @ - To_AV
-                          (A0B.Types.Integer_32
-                             (Calibration_Gyroscope_V_Accumulated));
-                  Velocity_W :=
-                    @ - To_AV
-                          (A0B.Types.Integer_32
-                             (Calibration_Gyroscope_W_Accumulated));
 
                   Console.Put ("Recomputed: ");
                   Console.Put
