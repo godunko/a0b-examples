@@ -53,6 +53,7 @@ package body PCA9685_PS2C_Servo.Demo is
      A0B.PlayStation2_Controllers.Protocol.Communication_Buffer;
 
    PS2C_State : A0B.PlayStation2_Controllers.Controller_State;
+   Status     : aliased A0B.Operation_Status;
 
    -----------------------
    -- On_Initialization --
@@ -87,6 +88,7 @@ package body PCA9685_PS2C_Servo.Demo is
             PCA9685_PS2C_Servo.Configuration.PS2C_Controller.Transfer
               (Transmit_Buffer => PS2C_Transmit_Buffer,
                Receive_Buffer  => PS2C_Receive_Buffer,
+               Status          => Status,
                On_Completed    => On_Initialization_Callbacks.Create_Callback,
                Success         => Success);
 
@@ -99,6 +101,7 @@ package body PCA9685_PS2C_Servo.Demo is
             PCA9685_PS2C_Servo.Configuration.PS2C_Controller.Transfer
               (Transmit_Buffer => PS2C_Transmit_Buffer,
                Receive_Buffer  => PS2C_Receive_Buffer,
+               Status          => Status,
                On_Completed    => On_Initialization_Callbacks.Create_Callback,
                Success         => Success);
 
@@ -111,6 +114,7 @@ package body PCA9685_PS2C_Servo.Demo is
             PCA9685_PS2C_Servo.Configuration.PS2C_Controller.Transfer
               (Transmit_Buffer => PS2C_Transmit_Buffer,
                Receive_Buffer  => PS2C_Receive_Buffer,
+               Status          => Status,
                On_Completed    => On_Initialization_Callbacks.Create_Callback,
                Success         => Success);
 
@@ -143,6 +147,7 @@ package body PCA9685_PS2C_Servo.Demo is
       PCA9685_PS2C_Servo.Configuration.PS2C_Controller.Transfer
         (Transmit_Buffer => PS2C_Transmit_Buffer,
          Receive_Buffer  => PS2C_Receive_Buffer,
+         Status          => Status,
          On_Completed    => On_Poll_Callbacks.Create_Callback,
          Success         => Success);
 
