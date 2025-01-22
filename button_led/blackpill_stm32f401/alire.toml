@@ -1,6 +1,6 @@
 name = "button_led_blackpill_stm32f401"
 description = "Key/LED demo for BlackPill STM32F401"
-version = "0.1.0-dev"
+version = "0.1.0"
 website = "https://github.com/godunko/a0b-examples"
 
 authors = ["Vadim Godunko"]
