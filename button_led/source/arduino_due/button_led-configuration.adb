@@ -4,7 +4,7 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-package body Key_LED.Configuration is
+package body Button_LED.Configuration is
 
    ----------------
    -- Initialize --
@@ -21,4 +21,4 @@ package body Key_LED.Configuration is
       LED.Configure_Output;
    end Initialize;
 
-end Key_LED.Configuration;
+end Button_LED.Configuration;

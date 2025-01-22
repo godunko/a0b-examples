@@ -14,7 +14,7 @@ project Arduino_Due is
    for Target use Light_Arduino_Due'Target;
    for Runtime use Light_Arduino_Due'Runtime;
 
-   for Main use ("key_led-driver.adb");
+   for Main use ("button_led-driver.adb");
 
    for Source_Dirs use
      ("../source",
@@ -27,7 +27,7 @@ project Arduino_Due is
    end Compiler;
 
    package Builder is
-      for Executable ("key_led-driver.adb") use "arduino_due.elf";
+      for Executable ("button_led-driver.adb") use "arduino_due.elf";
    end Builder;
 
    package Linker is

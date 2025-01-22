@@ -7,7 +7,7 @@
 with A0B.STM32F401.GPIO.PIOA;
 with A0B.STM32F401.GPIO.PIOC;
 
-package Key_LED.Configuration
+package Button_LED.Configuration
   with Preelaborate
 is
 
@@ -17,4 +17,4 @@ is
    procedure Initialize;
    --  Configure pins.
 
-end Key_LED.Configuration;
+end Button_LED.Configuration;

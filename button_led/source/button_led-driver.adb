@@ -6,11 +6,11 @@
 
 with A0B.ARMv7M.Instructions;
 
-with Key_LED.Application;
+with Button_LED.Application;
 
-procedure Key_LED.Driver is
+procedure Button_LED.Driver is
 begin
-   Key_LED.Application.Initialize;
+   Button_LED.Application.Initialize;
 
    A0B.ARMv7M.Instructions.Enable_Interrupts;
 
@@ -19,4 +19,4 @@ begin
 
       A0B.ARMv7M.Instructions.Wait_For_Interrupt;
    end loop;
-end Key_LED.Driver;
+end Button_LED.Driver;

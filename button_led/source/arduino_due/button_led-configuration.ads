@@ -10,7 +10,7 @@
 
 with A0B.ATSAM3X8E.PIO.PIOB;
 
-package Key_LED.Configuration
+package Button_LED.Configuration
   with Preelaborate
 is
 
@@ -21,4 +21,4 @@ is
    procedure Initialize;
    --  Configure pins.
 
-end Key_LED.Configuration;
+end Button_LED.Configuration;

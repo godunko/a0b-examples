@@ -4,8 +4,8 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-package Key_LED
+package Button_LED
   with Pure
 is
 
-end Key_LED;
+end Button_LED;

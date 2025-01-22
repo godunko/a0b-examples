@@ -6,9 +6,9 @@
 
 with A0B.Callbacks.Generic_Parameterless;
 
-with Key_LED.Configuration;
+with Button_LED.Configuration;
 
-package body Key_LED.Application
+package body Button_LED.Application
   with Preelaborate
 is
 
@@ -25,12 +25,13 @@ is
 
    procedure Initialize is
    begin
-      Key_LED.Configuration.Initialize;
+      Button_LED.Configuration.Initialize;
 
-      Key_LED.Configuration.Key.Set_Callback (On_Key_Callbacks.Create_Callback);
-      Key_LED.Configuration.Key.Enable_Interrupt;
+      Button_LED.Configuration.Key.Set_Callback
+        (On_Key_Callbacks.Create_Callback);
+      Button_LED.Configuration.Key.Enable_Interrupt;
 
-      Key_LED.Configuration.LED.Set (State);
+      Button_LED.Configuration.LED.Set (State);
    end Initialize;
 
    ------------
@@ -40,7 +41,7 @@ is
    procedure On_Key is
    begin
       State := not State;
-      Key_LED.Configuration.LED.Set (State);
+      Button_LED.Configuration.LED.Set (State);
    end On_Key;
 
-end Key_LED.Application;
+end Button_LED.Application;

@@ -14,7 +14,7 @@ project BlackPill_STM32F401 is
    for Target use Light_Blackpill_STM32F401'Target;
    for Runtime use Light_Blackpill_STM32F401'Runtime;
 
-   for Main use ("key_led-driver.adb");
+   for Main use ("button_led-driver.adb");
 
    for Source_Dirs use
      ("../source",
@@ -27,7 +27,7 @@ project BlackPill_STM32F401 is
    end Compiler;
 
    package Builder is
-      for Executable ("key_led-driver.adb") use "blackpill_stm32f401.elf";
+      for Executable ("button_led-driver.adb") use "blackpill_stm32f401.elf";
    end Builder;
 
    package Linker is

@@ -4,10 +4,10 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-package Key_LED.Application
+package Button_LED.Application
   with Preelaborate
 is
 
    procedure Initialize;
 
-end Key_LED.Application;
+end Button_LED.Application;
