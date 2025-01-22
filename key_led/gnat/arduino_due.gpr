@@ -1,0 +1,39 @@
+--
+--  Copyright (C) 2025, Vadim Godunko <vgodunko@gmail.com>
+--
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+--
+
+with "../arduino_due/config/key_led_arduino_due_config.gpr";
+
+with "a0b_common.gpr";
+with "light_arduino_due";
+
+project Arduino_Due is
+
+   for Target use Light_Arduino_Due'Target;
+   for Runtime use Light_Arduino_Due'Runtime;
+
+   for Main use ("key_led-driver.adb");
+
+   for Source_Dirs use
+     ("../source",
+      "../source/arduino_due");
+   for Object_Dir use "../.objs/" & A0B_Common.Object_Dir_Suffix & "/arduino_due";
+   for Exec_Dir use "../bin";
+
+   package Compiler is
+      for Switches ("Ada") use A0B_Common.Compiler_Switches_Ada;
+   end Compiler;
+
+   package Builder is
+      for Executable ("key_led-driver.adb") use "arduino_due.elf";
+   end Builder;
+
+   package Linker is
+      for Switches ("Ada") use
+        Light_Arduino_Due.Linker_Switches
+         & ("-Wl,--gc-sections");
+   end Linker;
+
+end Arduino_Due;

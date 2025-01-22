@@ -1,0 +1,21 @@
+name = "key_led_arduino_due"
+description = "Key/LED demo for Arduino Due"
+version = "0.1.0-dev"
+website = "https://github.com/godunko/a0b-examples"
+
+authors = ["Vadim Godunko"]
+maintainers = ["Vadim Godunko <vgodunko@gmail.com>"]
+maintainers-logins = ["godunko"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+tags = ["a0b", "embedded", "demo", "arduino", "due"]
+
+project-files = ["../gnat/arduino_due.gpr"]
+
+[configuration]
+generate_ada = false
+generate_c = false
+generate_gpr = true
+
+[[depends-on]]
+a0b_atsam3x8e_gpio = "*"
+light_arduino_due = "*"
