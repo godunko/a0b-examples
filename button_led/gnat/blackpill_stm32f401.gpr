@@ -4,7 +4,7 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-with "../blackpill_stm32f401/config/key_led_blackpill_stm32f401_config.gpr";
+with "../blackpill_stm32f401/config/button_led_blackpill_stm32f401_config.gpr";
 
 with "a0b_common.gpr";
 with "light_blackpill_stm32f401";

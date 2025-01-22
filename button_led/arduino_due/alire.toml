@@ -1,4 +1,4 @@
-name = "key_led_arduino_due"
+name = "button_led_arduino_due"
 description = "Key/LED demo for Arduino Due"
 version = "0.1.0-dev"
 website = "https://github.com/godunko/a0b-examples"

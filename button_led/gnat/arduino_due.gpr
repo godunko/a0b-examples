@@ -4,7 +4,7 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
-with "../arduino_due/config/key_led_arduino_due_config.gpr";
+with "../arduino_due/config/button_led_arduino_due_config.gpr";
 
 with "a0b_common.gpr";
 with "light_arduino_due";
