@@ -19,16 +19,6 @@ is
 
    State : Boolean := False;
 
-   ------------
-   -- On_Key --
-   ------------
-
-   procedure On_Key is
-   begin
-      State := not State;
-      Key_LED.Configuration.LED.Set (State);
-   end On_Key;
-
    ----------------
    -- Initialize --
    ----------------
@@ -42,5 +32,15 @@ is
 
       Key_LED.Configuration.LED.Set (State);
    end Initialize;
+
+   ------------
+   -- On_Key --
+   ------------
+
+   procedure On_Key is
+   begin
+      State := not State;
+      Key_LED.Configuration.LED.Set (State);
+   end On_Key;
 
 end Key_LED.Application;
