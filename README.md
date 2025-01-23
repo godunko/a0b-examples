@@ -16,6 +16,12 @@ alr build
 
 to build example. You can use your favorable tools/IDE to flash executable into MCU.
 
+Some examples might use crates from the [A0B Alire Index](https://github.com/godunko/a0b-alire-index), so you might need to add it
+
+```
+alr index --name a0b --add https://github.com/godunko/a0b-alire-index.git
+```
+
 ## Repository file tree structure
 
  * `<example>` directories contains all files for the given example
