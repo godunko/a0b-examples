@@ -3,9 +3,18 @@ all: build
 
 build:
 	alr build
+	alr exec -- arm-eabi-objcopy -O binary ../bin/blackpill_stm32f401.elf ../bin/blackpill_stm32f401.bin
+	ls -l ../bin/blackpill_stm32f401.bin ../bin/blackpill_stm32f401.elf
+
+clean:
+	alr clean
+	rm -rf ../.objs ../bin
+
+flash:
+	openocd -f openocd.cfg -c 'program ../bin/blackpill_stm32f401.bin verify reset exit 0x08000000'
 
 ocd:
-	openocd -f interface/cmsis-dap.cfg -c 'cmsis_dap_backend hid' -f target/stm32f4x.cfg
+	openocd -f openocd.cfg
 
 gdb:
 	eval `alr printenv` && arm-eabi-gdb --command="gdbinit" ../bin/blackpill_stm32f401.elf
