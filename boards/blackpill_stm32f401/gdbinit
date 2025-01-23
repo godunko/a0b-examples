@@ -1,0 +1,13 @@
+set pagination off
+
+target extended-remote localhost:3333
+
+monitor arm semihosting enable
+
+break __gnat_last_chance_handler
+commands
+  backtrace
+  frame 1
+end
+
+monitor reset halt
