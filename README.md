@@ -22,6 +22,8 @@ Some examples might use crates from the [A0B Alire Index](https://github.com/god
 alr index --name a0b --add https://github.com/godunko/a0b-alire-index.git
 ```
 
+`boards` directory contains some utilities to build, flash and debug examples on particular boards. You can use it to grab some ideas.
+
 ## Repository file tree structure
 
 * `<example>` directories contains all files for the given example
