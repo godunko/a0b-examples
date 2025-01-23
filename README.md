@@ -24,13 +24,14 @@ alr index --name a0b --add https://github.com/godunko/a0b-alire-index.git
 
 ## Repository file tree structure
 
- * `<example>` directories contains all files for the given example
-   * `<board>` directories contains `alire.toml` file to build an example
-   * `bin` directory contains executable files
-   * `gnat` directory constains project files
-   * `source` directory contains platform independed part of the source code
-     * `<board>` directories for board specific code
- * `source` contains common source code shared between examples
+* `<example>` directories contains all files for the given example
+  * `<board>` directories contains `alire.toml` file to build an example
+  * `bin` directory contains executable files
+  * `gnat` directory constains project files
+  * `source` directory contains platform independed part of the source code
+    * `<board>` directories for board specific code
+* `boards` various utilities to build, flash and debug examples on particular boards
+* `source` contains common source code shared between examples
 
 ## Example packages structure
 
