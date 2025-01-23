@@ -1,10 +1,10 @@
 # A0B Examples
 
 This repository contains various examples of use of A0B's components for bare board programming.
-
- * Turn on/off LED by button click.
- * Controls position of the servo motor connected to PCA9685 PWM controller by joystick of the PlayStation2 gamepad.
- * Calibration of the MPU9250 sensor.
+ * `blink_led` Just blink LED. Shows how to configure ARM's SysTick timer and to use `A0B.Timer` package.
+ * `button_led` Turn on/off LED by button click. Shows how to configure and handle external interrupts.
+ * `mpu9250_calibration` Calibration of the MPU9250 sensor. Shows how to use UART as console, run main loop and suspend CPU till callback arrived inside it, and configure and obtain data from MPU9050 IMU sensor.
+ * `pca9685_ps2c_servo` Controls position of the servo motor connected to PCA9685 PWM controller by joystick of the PlayStation2 gamepad. Shows how to use one of MCU's timers instead of SysTick's timer to improve precision, configure I2C and SPI buses, use PCA9685 chip to generate PWM, and use PlayStation 2 gamepad.
 
 ## Build
 
