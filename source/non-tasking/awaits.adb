@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2024, Vadim Godunko <vgodunko@gmail.com>
+--  Copyright (C) 2024-2025, Vadim Godunko <vgodunko@gmail.com>
 --
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
@@ -8,7 +8,7 @@
 
 pragma Restrictions (No_Elaboration_Code);
 
-with A0B.ARMv7M.CMSIS;
+with A0B.ARMv7M.Instructions;
 with A0B.Callbacks.Generic_Parameterless;
 
 package body Awaits is
@@ -53,7 +53,7 @@ package body Awaits is
       end if;
 
       while not Flag loop
-         A0B.ARMv7M.CMSIS.Wait_For_Interrupt;
+         A0B.ARMv7M.Instructions.Wait_For_Interrupt;
       end loop;
    end Suspend_Until_Callback;
 
