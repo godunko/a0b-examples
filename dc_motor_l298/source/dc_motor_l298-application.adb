@@ -21,14 +21,18 @@ package body DC_Motor_L298.Application is
 
    use type A0B.Types.Unsigned_16;
 
-   ENA_Pin : A0B.STM32F401.GPIO.GPIO_Line
+   ENA_Pin       : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOB.PB8;
-   IN1_Pin : A0B.STM32F401.GPIO.GPIO_Line
+   IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOB.PB7;
-   IN2_Pin : A0B.STM32F401.GPIO.GPIO_Line
+   IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOB.PB6;
-   ADC_Pin : A0B.STM32F401.GPIO.GPIO_Line
+   Current_Pin   : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOA.PA0;
+   Voltage_A_Pin : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOA.PA1;
+   Voltage_B_Pin : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOA.PA2;
 
    type State_Kind is (Forward, Backward, Stop, Off);
 
@@ -55,8 +59,14 @@ package body DC_Motor_L298.Application is
    --  1/1/3_360: PWM 25kHz CPU @84MHz (nominal for L298)
    --  1/1/2_100: PWM 40kHz CPU @84MHz (max for L298)
 
-   ADC_Data : array (1 .. 5_000) of A0B.Types.Unsigned_16 with Export;
-   Filtered : array (1 .. 1_000) of A0B.Types.Unsigned_16 with Export;
+   type Data is record
+      Current   : A0B.Types.Unsigned_16;
+      Voltage_A : A0B.Types.Unsigned_16;
+      Voltage_B : A0B.Types.Unsigned_16;
+   end record;
+
+   ADC_Data : array (1 .. 2_000) of Data with Export;
+   --  Filtered : array (1 .. 1_000) of A0B.Types.Unsigned_16 with Export;
 
    ------------
    -- Do_ADC --
@@ -71,17 +81,33 @@ package body DC_Motor_L298.Application is
 
    begin
       for J in ADC_Data'Range loop
+         ADC1_Periph.SQR3.SQ.Arr (1) := 2#000#;
          ADC1_Periph.CR2.SWSTART := True;
-
-         --  while not ADC1_Periph.SR.STRT loop
-         --     null;
-         --  end loop;
 
          while not ADC1_Periph.SR.EOC loop
             null;
          end loop;
 
-         ADC_Data (J) := ADC1_Periph.DR.DATA;
+         ADC_Data (J).Current := ADC1_Periph.DR.DATA;
+
+         ADC1_Periph.SQR3.SQ.Arr (1) := 2#001#;
+         ADC1_Periph.CR2.SWSTART := True;
+
+         while not ADC1_Periph.SR.EOC loop
+            null;
+         end loop;
+
+         ADC_Data (J).Voltage_A := ADC1_Periph.DR.DATA;
+
+         ADC1_Periph.SQR3.SQ.Arr (1) := 2#010#;
+         ADC1_Periph.CR2.SWSTART := True;
+
+         while not ADC1_Periph.SR.EOC loop
+            null;
+         end loop;
+
+         ADC_Data (J).Voltage_B := ADC1_Periph.DR.DATA;
+
       end loop;
 
       Period := A0B.Time.Clock - Start;
@@ -327,7 +353,9 @@ package body DC_Motor_L298.Application is
       --  ADC1_Periph.SMPR2 := 2#001#;
       ADC1_Periph.CR2.ADON := True;
 
-      ADC_Pin.Configure_Analog;
+      Current_Pin.Configure_Analog;
+      Voltage_A_Pin.Configure_Analog;
+      Voltage_B_Pin.Configure_Analog;
    end Initialize_ADC;
 
    -----------------
@@ -354,9 +382,9 @@ package body DC_Motor_L298.Application is
 
    begin
       for J in ADC_Data'Range loop
-         Minimum     := A0B.Types.Unsigned_16'Min (@, ADC_Data (J));
-         Maximum     := A0B.Types.Unsigned_16'Max (@, ADC_Data (J));
-         Accumulator := @ + A0B.Types.Integer_64 (ADC_Data (J));
+         Minimum     := A0B.Types.Unsigned_16'Min (@, ADC_Data (J).Current);
+         Maximum     := A0B.Types.Unsigned_16'Max (@, ADC_Data (J).Current);
+         Accumulator := @ + A0B.Types.Integer_64 (ADC_Data (J).Current);
       end loop;
 
       Average := A0B.Types.Unsigned_16 (Accumulator / ADC_Data'Length);
@@ -400,12 +428,39 @@ package body DC_Motor_L298.Application is
       --     --     & A0B.Types.Unsigned_16'Image (ADC_Data (J + 800)));
       --  end loop;
 
+      Console.New_Line;
+      Console.Put_Line ("Current");
+
       for J in ADC_Data'Range loop
          if (J - 1) mod 25 = 0 then
             Console.New_Line;
          end if;
 
-         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J)));
+         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J).Current));
+      end loop;
+
+      Console.New_Line;
+      Console.New_Line;
+      Console.Put_Line ("Voltage A");
+
+      for J in ADC_Data'Range loop
+         if (J - 1) mod 25 = 0 then
+            Console.New_Line;
+         end if;
+
+         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J).Voltage_A));
+      end loop;
+
+      Console.New_Line;
+      Console.New_Line;
+      Console.Put_Line ("Voltage B");
+
+      for J in ADC_Data'Range loop
+         if (J - 1) mod 25 = 0 then
+            Console.New_Line;
+         end if;
+
+         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J).Voltage_B));
       end loop;
 
       Console.New_Line;
