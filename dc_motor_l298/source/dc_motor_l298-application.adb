@@ -4,10 +4,15 @@
 --  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 --
 
+pragma Ada_2022;
+
+with A0B.STM32F401.GPIO.PIOA;
 with A0B.STM32F401.GPIO.PIOB;
+with A0B.STM32F401.SVD.ADC;
 with A0B.STM32F401.SVD.RCC;
 with A0B.STM32F401.SVD.TIM;
 with A0B.STM32F401.TIM_Lines;
+with A0B.Time.Clock;
 with A0B.Types;
 
 with Console;
@@ -22,6 +27,8 @@ package body DC_Motor_L298.Application is
      renames A0B.STM32F401.GPIO.PIOB.PB7;
    IN2_Pin : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOB.PB6;
+   ADC_Pin : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOA.PA0;
 
    type State_Kind is (Forward, Backward, Stop, Off);
 
@@ -32,12 +39,56 @@ package body DC_Motor_L298.Application is
 
    procedure Set_Duty (To : Integer);
 
+   procedure Initialize_ADC;
+
+   procedure Do_ADC;
+
+   procedure Process_ADC;
+
    --  Prescale : constant := 2_100;
    --  Prescale : constant := 210;    --  4/210/1000 = 100 Hz
-   Divider  : constant := 2#00#;  --  1
    --  Prescale : constant := 21;     --  4/21/1000 = 1kHz
+   Divider  : constant := 2#00#;  --  1
    Prescale : constant := 1;
-   Cycle    : constant := 1_000;
+   --  Cycle    : constant := 2_100;
+   Cycle    : constant := 3_360;
+   --  1/1/3_360: PWM 25kHz CPU @84MHz (nominal for L298)
+   --  1/1/2_100: PWM 40kHz CPU @84MHz (max for L298)
+
+   ADC_Data : array (1 .. 5_000) of A0B.Types.Unsigned_16 with Export;
+   Filtered : array (1 .. 1_000) of A0B.Types.Unsigned_16 with Export;
+
+   ------------
+   -- Do_ADC --
+   ------------
+
+   procedure Do_ADC is
+      use type A0B.Time.Monotonic_Time;
+      use A0B.STM32F401.SVD.ADC;
+
+      Start  : constant A0B.Time.Monotonic_Time := A0B.Time.Clock;
+      Period : A0B.Time.Time_Span;
+
+   begin
+      for J in ADC_Data'Range loop
+         ADC1_Periph.CR2.SWSTART := True;
+
+         --  while not ADC1_Periph.SR.STRT loop
+         --     null;
+         --  end loop;
+
+         while not ADC1_Periph.SR.EOC loop
+            null;
+         end loop;
+
+         ADC_Data (J) := ADC1_Periph.DR.DATA;
+      end loop;
+
+      Period := A0B.Time.Clock - Start;
+
+      Console.Put_Line
+        (A0B.Types.Integer_64'Image (A0B.Time.To_Nanoseconds (Period)));
+   end Do_ADC;
 
    ----------------
    -- Initialize --
@@ -158,7 +209,235 @@ package body DC_Motor_L298.Application is
 
       IN1_Pin.Set (False);
       IN2_Pin.Set (False);
+
+      Initialize_ADC;
    end Initialize;
+
+   --------------------
+   -- Initialize_ADC --
+   --------------------
+
+   procedure Initialize_ADC is
+      use A0B.STM32F401.SVD.ADC;
+
+   begin
+      A0B.STM32F401.SVD.RCC.RCC_Periph.APB2ENR.ADC1EN := True;
+
+      declare
+         Aux : CR1_Register := ADC1_Periph.CR1;
+
+      begin
+      --  --  Analog watchdog channel select bits
+      --  AWDCH          : CR1_AWDCH_Field := 16#0#;
+      --  --  Interrupt enable for EOC
+      --  EOCIE          : Boolean := False;
+      --  --  Analog watchdog interrupt enable
+      --  AWDIE          : Boolean := False;
+      --  --  Interrupt enable for injected channels
+      --  JEOCIE         : Boolean := False;
+      --  --  Scan mode
+      --  SCAN           : Boolean := False;
+      --  --  Enable the watchdog on a single channel in scan mode
+      --  AWDSGL         : Boolean := False;
+      --  --  Automatic injected group conversion
+      --  JAUTO          : Boolean := False;
+      --  --  Discontinuous mode on regular channels
+      --  DISCEN         : Boolean := False;
+      --  --  Discontinuous mode on injected channels
+      --  JDISCEN        : Boolean := False;
+      --  --  Discontinuous mode channel count
+      --  DISCNUM        : CR1_DISCNUM_Field := 16#0#;
+      --  --  unspecified
+      --  Reserved_16_21 : A0B.Types.SVD.UInt6 := 16#0#;
+      --  --  Analog watchdog enable on injected channels
+      --  JAWDEN         : Boolean := False;
+      --  --  Analog watchdog enable on regular channels
+      --  AWDEN          : Boolean := False;
+      --  --  Resolution
+      --  RES            : CR1_RES_Field := 16#0#;
+      --  --  Overrun interrupt enable
+      --  OVRIE          : Boolean := False;
+      --  --  unspecified
+      --  Reserved_27_31 : A0B.Types.SVD.UInt5 := 16#0#;
+
+         Aux.RES := 2#00#;  --  12-bit (15 ADCCLK cycles)
+
+         ADC1_Periph.CR1 := Aux;
+      end;
+
+      declare
+         Aux : CR2_Register := ADC1_Periph.CR2;
+
+      begin
+      --  --  External event select for injected group
+      --  JEXTSEL        : CR2_JEXTSEL_Field := 16#0#;
+      --  --  External trigger enable for injected channels
+      --  JEXTEN         : CR2_JEXTEN_Field := 16#0#;
+      --  --  Start conversion of injected channels
+      --  JSWSTART       : Boolean := False;
+      --  --  unspecified
+      --  Reserved_23_23 : A0B.Types.SVD.Bit := 16#0#;
+      --  --  External event select for regular group
+      --  EXTSEL         : CR2_EXTSEL_Field := 16#0#;
+      --  --  External trigger enable for regular channels
+      --  EXTEN          : CR2_EXTEN_Field := 16#0#;
+      --  --  Start conversion of regular channels
+      --  SWSTART        : Boolean := False;
+      --  --  unspecified
+      --  Reserved_31_31 : A0B.Types.SVD.Bit := 16#0#;
+
+         Aux.ADON  := False;  --  Disable ADC conversion and go to power down mode
+         Aux.CONT  := False;  --  Single conversion mode
+         Aux.DMA   := False;  --  DMA mode disabled
+         Aux.DDS   := False;
+         --  No new DMA request is issued after the last transfer (as configured
+         --  in the DMA controller)
+         Aux.EOCS  := True;
+         --  The EOC bit is set at the end of each regular conversion. Overrun
+         --  detection is enabled.
+         Aux.ALIGN := False;  --  Right alignment
+         --  Aux.ALIGN := True;   --  Left alignment
+
+         ADC1_Periph.CR2 := Aux;
+      end;
+
+      --  declare
+      --     Aux : CR1_Register := ADC1_Periph.CR1;
+      --
+      --  begin
+      --     ADC1_Periph.CR1 := Aux;
+      --  end;
+
+      --  declare
+      --     Aux : CR1_Register := ADC1_Periph.CR1;
+      --
+      --  begin
+      --     ADC1_Periph.CR1 := Aux;
+      --  end;
+
+      declare
+         Aux : CCR_Register := ADC_Common_Periph.CCR;
+
+      begin
+         Aux.ADCPRE := 2#01#;  --  PCLK2 divided by 4
+
+         ADC_Common_Periph.CCR := Aux;
+      end;
+
+      --  ADC1_Periph.SMPR2 := 2#001#;
+      ADC1_Periph.CR2.ADON := True;
+
+      ADC_Pin.Configure_Analog;
+   end Initialize_ADC;
+
+   -----------------
+   -- Process_ADC --
+   -----------------
+
+   procedure Process_ADC is
+      use type A0B.Types.Integer_64;
+
+      Minimum     : A0B.Types.Unsigned_16 := A0B.Types.Unsigned_16'Last;
+      Maximum     : A0B.Types.Unsigned_16 := A0B.Types.Unsigned_16'First;
+      Average     : A0B.Types.Unsigned_16;
+      Accumulator : A0B.Types.Integer_64  := 0;
+      --  Samples     : A0B.Types.Integer_64;
+
+      --  procedure Put_Item (Item : A0B.Types.Unsigned_16);
+      --
+      --  procedure Put_Item (Item : A0B.Types.Unsigned_16) is
+      --  begin
+      --     Console.Put
+      --       (A0B.Types.Unsigned_16'Image (Item)
+      --        & A0B.Types.Unsigned_16'Image (Maximum - Item));
+      --  end Put_Item;
+
+   begin
+      for J in ADC_Data'Range loop
+         Minimum     := A0B.Types.Unsigned_16'Min (@, ADC_Data (J));
+         Maximum     := A0B.Types.Unsigned_16'Max (@, ADC_Data (J));
+         Accumulator := @ + A0B.Types.Integer_64 (ADC_Data (J));
+      end loop;
+
+      Average := A0B.Types.Unsigned_16 (Accumulator / ADC_Data'Length);
+
+      Console.Put_Line
+        (A0B.Types.Unsigned_16'Image (Minimum)
+         & A0B.Types.Unsigned_16'Image (Average)
+         & A0B.Types.Unsigned_16'Image (Maximum)
+         & "  "
+         & A0B.Types.Unsigned_16'Image (Average - Minimum)
+         & A0B.Types.Unsigned_16'Image (Maximum - Average)
+         & A0B.Types.Unsigned_16'Image (Maximum - Minimum)
+        );
+
+      --  for J in 1 .. 100 loop
+      --     Put_Item (ADC_Data (J));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 100));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 200));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 300));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 400));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 500));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 600));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 700));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 800));
+      --     Console.Put (' ');
+      --     Put_Item (ADC_Data (J + 900));
+      --     Console.New_Line;
+      --     --  Console.Put_Line
+      --     --    (A0B.Types.Unsigned_16'Image (ADC_Data (J))
+      --     --     & A0B.Types.Unsigned_16'Image (ADC_Data (J + 200))
+      --     --     & A0B.Types.Unsigned_16'Image (ADC_Data (J + 400))
+      --     --     & A0B.Types.Unsigned_16'Image (ADC_Data (J + 600))
+      --     --     & A0B.Types.Unsigned_16'Image (ADC_Data (J + 800)));
+      --  end loop;
+
+      for J in ADC_Data'Range loop
+         if (J - 1) mod 25 = 0 then
+            Console.New_Line;
+         end if;
+
+         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J)));
+      end loop;
+
+      Console.New_Line;
+
+      --  for J in ADC_Data'Range loop
+      --     if J = ADC_Data'First then
+      --        Accumulator := A0B.Types.Integer_64 (ADC_Data (J));
+      --        Samples     := 1;
+      --
+      --     elsif J in 2 .. 8 then
+      --        Accumulator := @ + A0B.Types.Integer_64 (ADC_Data (J));
+      --        Samples     := @ + 1;
+      --
+      --     else
+      --        Accumulator := @ - A0B.Types.Integer_64 (ADC_Data (J -  Integer (Samples)));
+      --        Accumulator := @ + A0B.Types.Integer_64 (ADC_Data (J));
+      --     end if;
+      --
+      --     Filtered (J) := A0B.Types.Unsigned_16 ( Accumulator / Samples);
+      --  end loop;
+      --
+      --  for J in Filtered'Range loop
+      --     if J mod 17 = 0 then
+      --        Console.New_Line;
+      --     end if;
+      --
+      --     Console.Put (A0B.Types.Unsigned_16'Image (Filtered (J)));
+      --  end loop;
+
+      Console.New_Line;
+
+   end Process_ADC;
 
    ---------
    -- Run --
@@ -273,6 +552,11 @@ package body DC_Motor_L298.Application is
 
                   Update_Duty (Aux);
                end;
+
+            when 'a' | 'A' =>
+               Do_ADC;
+               Console.Put_Line ("ADC data collected");
+               Process_ADC;
 
             when others =>
                null;
