@@ -21,12 +21,23 @@ package body DC_Motor_L298.Application is
 
    use type A0B.Types.Unsigned_16;
 
-   ENA_Pin       : A0B.STM32F401.GPIO.GPIO_Line
-     renames A0B.STM32F401.GPIO.PIOB.PB8;
-   IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
-     renames A0B.STM32F401.GPIO.PIOB.PB7;
-   IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
-     renames A0B.STM32F401.GPIO.PIOB.PB6;
+   M1_IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOB.PB4;  --  TIM3_CH1
+   M1_IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOB.PB5;  --  TIM3_CH2
+   M2_IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOB.PB0;  --  TIM3_CH3
+   M2_IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOB.PB1;  --  TIM3_CH4
+   --  M3_IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+   --    renames A0B.STM32F401.GPIO.PIOB.PB6;  --  TIM4_CH1
+   --  M3_IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+   --    renames A0B.STM32F401.GPIO.PIOB.PB7;  --  TIM4_CH2
+   --  M4_IN1_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+   --    renames A0B.STM32F401.GPIO.PIOB.PB8;  --  TIM4_CH3
+   --  M4_IN2_Pin       : A0B.STM32F401.GPIO.GPIO_Line
+   --    renames A0B.STM32F401.GPIO.PIOB.PB9;  --  TIM4_CH4
+
    Current_Pin   : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOA.PA0;
    Voltage_A_Pin : A0B.STM32F401.GPIO.GPIO_Line
@@ -36,7 +47,7 @@ package body DC_Motor_L298.Application is
    Position_Pin  : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOA.PA3;
 
-   type State_Kind is (Forward, Backward, Stop, Off);
+   type State_Kind is (Forward, Backward, Break, Off);
 
    State : State_Kind := Off;
    Duty  : Integer range 0 .. 100 := 50;
@@ -45,7 +56,11 @@ package body DC_Motor_L298.Application is
 
    procedure Set_Duty (To : Integer);
 
-   procedure Initialize_ADC;
+   procedure Initialize_ADC1;
+   --  Initialize ADC1.
+
+   procedure Initialize_TIM3;
+   --  Initialize TIM3 timer.
 
    procedure Do_ADC;
 
@@ -54,7 +69,7 @@ package body DC_Motor_L298.Application is
    --  Prescale : constant := 2_100;
    --  Prescale : constant := 210;    --  4/210/1000 = 100 Hz
    --  Prescale : constant := 21;     --  4/21/1000 = 1kHz
-   Divider  : constant := 2#00#;  --  1
+   Divider  : constant := 2#00#;  --  00: tDTS = tCK_INT
    Prescale : constant := 1;
    --  Cycle    : constant := 2_100;
    Cycle    : constant := 3_360;
@@ -133,128 +148,17 @@ package body DC_Motor_L298.Application is
 
    procedure Initialize is
    begin
-      A0B.STM32F401.SVD.RCC.RCC_Periph.APB2ENR.TIM10EN := True;
-
-      declare
-         Aux : A0B.STM32F401.SVD.TIM.CR1_Register_2 :=
-           A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1;
-
-      begin
-         Aux.CEN  := False;    --  Counter disabled
-         Aux.UDIS := False;    --  UEV enabled
-         Aux.URS  := False;
-         --  Aux.URS  := True;
-         --  --  ??? Only counter overflow generates an UEV if enabled.
-         --  Aux.OPM
-         Aux.ARPE := True;     --  TIMx_ARR register is buffered
-         Aux.CKD  := Divider;
-         --  Aux.CKD  := 2#10#;  --  tDTS = 4 � tCK_INT
-
-         A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1 := Aux;
-      end;
-
-      --  RCC_Periph.APB2ENR.TIM11EN := True;
-      --
-      --  declare
-      --     Aux : CR1_Register_2 := TIM11_Periph.CR1;
-      --
-      --  begin
-      --     Aux.CEN  := False;  --  Counter disabled
-      --     Aux.UDIS := False;  --  UEV enabled.
-      --     Aux.URS  := True;
-      --     --  Only counter overflow generates an UEV if enabled.
-      --     Aux.ARPE := False;  --  TIMx_ARR register is not buffered
-      --     --  Aux.CDK  := <>;
-      --
-      --     TIM11_Periph.CR1 := Aux;
-      --  end;
-
-      A0B.STM32F401.SVD.TIM.TIM10_Periph.PSC.PSC := Prescale - 1;  --  65_536 - 1
-      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.PSC.PSC := 65_535;  --  65_536 - 1
-        --  A0B.Types.Unsigned_16 (Timer_Peripheral_Frequency / Prescaler_Divider);
-
-      declare
-         Aux : A0B.STM32F401.SVD.TIM.CCMR1_Output_Register_2 :=
-           A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output;
-
-      begin
-         Aux.CC1S  := 2#00#;  --  CC1 channel is configured as output.
-      --  --  Output Compare 1 fast enable
-      --  OC1FE         : Boolean := False;
-      --  --  Output Compare 1 preload enable
-      --  OC1PE         : Boolean := False;
-         Aux.OC1M  := 2#110#;
-         --  PWM mode 1 - Channel 1 is active as long as TIMx_CNT < TIMx_CCR1
-         --  else inactive.
-
-         A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output := Aux;
-      end;
-
-      declare
-         Aux : A0B.STM32F401.SVD.TIM.CCER_Register_3 :=
-           A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER;
-
-      begin
-      --  --  Capture/Compare 1 output enable
-      --  CC1E          : Boolean := False;
-         Aux.CC1P := False;  --  OC1 active high
-
-         --  --  unspecified
-      --  Reserved_2_2  : A0B.Types.SVD.Bit := 16#0#;
-      --  --  Capture/Compare 1 output Polarity
-      --  CC1NP         : Boolean := False;
-
-         A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER := Aux;
-      end;
-
-      --  --  Enable update interrupt
-      --
-      --  declare
-      --     Aux : DIER_Register_3 := TIM11_Periph.DIER;
-      --
-      --  begin
-      --     Aux.CC1IE := False;  --  CC1 interrupt disabled
-      --     Aux.UIE   := True;   --  Update interrupt enabled
-      --
-      --     TIM11_Periph.DIER := Aux;
-      --  end;
-      --
-      --  A0B.ARMv7M.NVIC_Utilities.Clear_Pending
-      --    (A0B.STM32F401.TIM1_TRG_COM_TIM11);
-      --  A0B.ARMv7M.NVIC_Utilities.Enable_Interrupt
-      --    (A0B.STM32F401.TIM1_TRG_COM_TIM11);
-
-      ENA_Pin.Configure_Alternative_Function
-        (Line  => A0B.STM32F401.TIM_Lines.TIM10_CH1,
-         Mode  => A0B.STM32F401.GPIO.Push_Pull,
-         Speed => A0B.STM32F401.GPIO.Very_High,
-         Pull  => A0B.STM32F401.GPIO.Pull_Up);
-      IN1_Pin.Configure_Output
-        (Mode  => A0B.STM32F401.GPIO.Push_Pull,
-         Speed => A0B.STM32F401.GPIO.Very_High,
-         Pull  => A0B.STM32F401.GPIO.Pull_Up);
-      IN2_Pin.Configure_Output
-        (Mode  => A0B.STM32F401.GPIO.Push_Pull,
-         Speed => A0B.STM32F401.GPIO.Very_High,
-         Pull  => A0B.STM32F401.GPIO.Pull_Up);
-
-      A0B.STM32F401.SVD.TIM.TIM10_Periph.ARR.ARR   := Cycle - 1;
-      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCR1.CCR1 := 512;
-      A0B.STM32F401.SVD.TIM.TIM10_Periph.EGR.UG    := True;
-      A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER.CC1E := True;
-      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN   := True;
-
-      IN1_Pin.Set (False);
-      IN2_Pin.Set (False);
-
-      Initialize_ADC;
+      Initialize_TIM3;
+      --  Initialize_TIM4;
+      --  Initialize_TIM5;
+      Initialize_ADC1;
    end Initialize;
 
-   --------------------
-   -- Initialize_ADC --
-   --------------------
+   ---------------------
+   -- Initialize_ADC1 --
+   ---------------------
 
-   procedure Initialize_ADC is
+   procedure Initialize_ADC1 is
       use A0B.STM32F401.SVD.ADC;
 
    begin
@@ -368,7 +272,336 @@ package body DC_Motor_L298.Application is
       Voltage_A_Pin.Configure_Analog;
       Voltage_B_Pin.Configure_Analog;
       Position_Pin.Configure_Analog;
-   end Initialize_ADC;
+   end Initialize_ADC1;
+
+   ---------------------
+   -- Initialize_TIM3 --
+   ---------------------
+
+   procedure Initialize_TIM3 is
+      use A0B.STM32F401.SVD.TIM;
+
+      TIM : TIM3_Peripheral renames TIM3_Periph;
+
+   begin
+      A0B.STM32F401.SVD.RCC.RCC_Periph.APB1ENR.TIM3EN := True;
+
+      --  --  DMA/Interrupt enable register
+      --  DIER         : aliased DIER_Register_1;
+      --  pragma Volatile_Full_Access (DIER);
+      --  --  status register
+      --  SR           : aliased SR_Register_1;
+      --  pragma Volatile_Full_Access (SR);
+      --  --  event generation register
+      --  EGR          : aliased EGR_Register_1;
+      --  pragma Volatile_Full_Access (EGR);
+      --  --  capture/compare register 1
+      --  CCR1         : aliased CCR1_Register_1;
+      --  pragma Volatile_Full_Access (CCR1);
+      --  --  capture/compare register 2
+      --  CCR2         : aliased CCR2_Register_1;
+      --  pragma Volatile_Full_Access (CCR2);
+      --  --  capture/compare register 3
+      --  CCR3         : aliased CCR3_Register_1;
+      --  pragma Volatile_Full_Access (CCR3);
+      --  --  capture/compare register 4
+      --  CCR4         : aliased CCR4_Register_1;
+      --  pragma Volatile_Full_Access (CCR4);
+      --  --  DMA control register
+      --  DCR          : aliased DCR_Register;
+      --  pragma Volatile_Full_Access (DCR);
+      --  --  DMA address for full transfer
+      --  DMAR         : aliased DMAR_Register;
+      --  pragma Volatile_Full_Access (DMAR);
+      --        --  capture/compare mode register 2 (output mode)
+      --        CCMR2_Output : aliased CCMR2_Output_Register;
+      --        pragma Volatile_Full_Access (CCMR2_Output);
+
+      --  Configure CR1
+
+      declare
+         Aux : A0B.STM32F401.SVD.TIM.CR1_Register := TIM.CR1;
+
+      begin
+         Aux.CEN  := False;  --  0: Counter disabled
+         Aux.UDIS := False;  --  0: UEV enabled
+         Aux.URS  := False;
+         --  0: Any of the following events generate an update interrupt or DMA
+         --  request if enabled.
+         --
+         --  These events can be:
+         --  – Counter overflow/underflow
+         --  – Setting the UG bit
+         --  – Update generation through the slave mode controller
+         Aux.OPM  := False;  --  0: Counter is not stopped at update event
+         Aux.DIR  := False;  --  0: Counter used as upcounter
+         Aux.CMS  := 2#00#;
+         --  00: Edge-aligned mode. The counter counts up or down depending on
+         --  the direction bit (DIR).
+         Aux.ARPE := True;   --  1: TIMx_ARR register is buffered
+         Aux.CKD  := Divider;
+
+         TIM.CR1 := Aux;
+      end;
+
+      --  Configure CR2
+
+      declare
+         Aux : CR2_Register_1 := TIM.CR2;
+
+      begin
+         --  Aux.CCDS := <>;  --  Not needed
+         Aux.MMS  := 2#001#;
+         --  001: Enable - the Counter enable signal, CNT_EN, is used as trigger
+         --  output (TRGO). It is useful to start several timers at the same
+         --  time or to control a window in which a slave timer is enabled.
+         --  The Counter Enable signal is generated by a logic OR between CEN
+         --  control bit and the trigger input when configured in gated mode.
+         --
+         --  When the Counter Enable signal is controlled by the trigger input,
+         --  there is a delay on TRGO, except if the master/slave mode is
+         --  selected (see the MSM bit description in TIMx_SMCR register).
+         Aux.TI1S := False;  --  0: The TIMx_CH1 pin is connected to TI1 input
+
+         TIM.CR2 := Aux;
+      end;
+
+      --  Configure SMCR
+
+      declare
+         Aux : SMCR_Register := TIM.SMCR;
+
+      begin
+         Aux.SMS  := 2#000#;
+         --  000: Slave mode disabled - if CEN = ‘1 then the prescaler is
+         --  clocked directly by the internal clock.
+         --  Aux.TS   := <>;  --  Not used
+         Aux.MSM  := True;
+         --  1: The effect of an event on the trigger input (TRGI) is delayed
+         --  to allow a perfect synchronization between the current timer and
+         --  its slaves (through TRGO). It is useful if we want to synchronize
+         --  several timers on a single external event.
+         --  Aux.ETF  := <>;  --  Not used
+         --  Aux.ETPS := <>;  --  Not used
+         --  Aux.ECE  := <>;  --  Not used
+         --  Aux.ETP  := <>;  --  Not used
+
+         TIM.SMCR := Aux;
+      end;
+
+      --  Configure DIER - Not used
+
+      --  XXX Reset SR by write 0?
+
+      --  Set EGR - Not used
+
+      --  Configure CCMR1
+
+      declare
+         Aux : CCMR1_Output_Register := TIM.CCMR1_Output;
+
+      begin
+         Aux.CC1S  := 2#00#;  --  00: CC1 channel is configured as output.
+         Aux.OC1FE := False;
+         --  0: CC1 behaves normally depending on counter and CCR1 values even
+         --  when the trigger is ON. The minimum delay to activate CC1 output
+         --  when an edge occurs on the trigger input is 5 clock cycles.
+         Aux.OC1PE := True;
+         --  1: Preload register on TIMx_CCR1 enabled. Read/Write operations
+         --  access the preload register. TIMx_CCR1 preload value is loaded
+         --  in the active register at each update event.
+         Aux.OC1M  := 2#110#;
+         --  110: PWM mode 1 - In upcounting, channel 1 is active as long as
+         --  TIMx_CNT<TIMx_CCR1 else inactive. In downcounting, channel 1 is
+         --  inactive (OC1REF=‘0) as long as TIMx_CNT>TIMx_CCR1 else active
+         --  (OC1REF=1).
+         Aux.OC1CE := False;  --  0: OC1Ref is not affected by the ETRF input
+         Aux.CC2S  := 2#00#;  --  00: CC2 channel is configured as output
+         Aux.OC2FE := False;
+         --  0: CC2 behaves normally depending on counter and CCR2 values even
+         --  when the trigger is ON. The minimum delay to activate CC2 output
+         --  when an edge occurs on the trigger input is 5 clock cycles.
+         Aux.OC2PE := True;
+         --  1: Preload register on TIMx_CCR2 enabled. Read/Write operations
+         --  access the preload register. TIMx_CCR2 preload value is loaded
+         --  in the active register at each update event.
+         Aux.OC2M  := 2#110#;
+         --  110: PWM mode 1 - In upcounting, channel 2 is active as long as
+         --  TIMx_CNT<TIMx_CCR2 else inactive. In downcounting, channel 2 is
+         --  inactive (OC2REF=‘0) as long as TIMx_CNT>TIMx_CCR2 else active
+         --  (OC2REF=1).
+         Aux.OC2CE := False; --  0: OC2Ref is not affected by the ETRF input
+
+         TIM.CCMR1_Output := Aux;
+      end;
+
+      --  Configure CCMR2  --  Not used yet
+
+      --  Configure CCER
+
+      declare
+         Aux : CCER_Register_1 := TIM.CCER;
+
+      begin
+         Aux.CC1E  := True;
+         --  1: On - OC1 signal is output on the corresponding output pin
+         Aux.CC1P  := False;  --  0: OC1 active high
+         Aux.CC1NP := False;
+         --  CC1 channel configured as output: CC1NP must be kept cleared in
+         --  this case.
+         Aux.CC2E  := True;
+         --  1: On - OC2 signal is output on the corresponding output pin
+         Aux.CC2P  := False;  --  0: OC2 active high
+         Aux.CC2NP := False;
+         --  CC2 channel configured as output: CC2NP must be kept cleared in
+         --  this case.
+         Aux.CC3E  := True;
+         --  1: On - OC3 signal is output on the corresponding output pin
+         Aux.CC3P  := False;  --  0: OC3 active high
+         Aux.CC3NP := False;
+         --  CC3 channel configured as output: CC3NP must be kept cleared in
+         --  this case.
+         Aux.CC4E  := True;
+         --  1: On - OC4 signal is output on the corresponding output pin
+         Aux.CC4P  := False;  --  0: OC4 active high
+         Aux.CC4NP := False;
+         --  CC4 channel configured as output: CC4NP must be kept cleared in
+         --  this case.
+
+         TIM.CCER := Aux;
+      end;
+
+      --  Set CNT to zero (TIM3/TIM4 support low part only)
+
+      TIM.CNT.CNT_L := 0;
+
+      --  Set PSC
+
+      TIM.PSC.PSC := Prescale;
+
+      --  Set ARR (TIM3/TIM4 support low part only)
+
+      TIM.ARR.ARR_L := Cycle - 1;
+
+      --  Set CCR1/CCR2/CCR3/CCR4 later
+
+      --  Configure DCR - Not used
+
+      --  Configure DMAR - Not used
+
+      --  Configure GPIO
+
+      M1_IN1_Pin.Configure_Alternative_Function
+        (Line  => A0B.STM32F401.TIM_Lines.TIM3_CH1,
+         Mode  => A0B.STM32F401.GPIO.Push_Pull,
+         Speed => A0B.STM32F401.GPIO.Very_High,
+         Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      M1_IN2_Pin.Configure_Alternative_Function
+        (Line  => A0B.STM32F401.TIM_Lines.TIM3_CH2,
+         Mode  => A0B.STM32F401.GPIO.Push_Pull,
+         Speed => A0B.STM32F401.GPIO.Very_High,
+         Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      M2_IN1_Pin.Configure_Alternative_Function
+        (Line  => A0B.STM32F401.TIM_Lines.TIM3_CH3,
+         Mode  => A0B.STM32F401.GPIO.Push_Pull,
+         Speed => A0B.STM32F401.GPIO.Very_High,
+         Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      M2_IN2_Pin.Configure_Alternative_Function
+        (Line  => A0B.STM32F401.TIM_Lines.TIM3_CH4,
+         Mode  => A0B.STM32F401.GPIO.Push_Pull,
+         Speed => A0B.STM32F401.GPIO.Very_High,
+         Pull  => A0B.STM32F401.GPIO.Pull_Up);
+
+      --  --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCR1.CCR1 := 512;
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.EGR.UG    := True;
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER.CC1E := True;
+      --  --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN   := True;
+      --
+      --  IN1_Pin.Set (False);
+      --  IN2_Pin.Set (False);
+
+      TIM.CR1.CEN := True;
+
+      --
+      --
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.PSC.PSC := Prescale - 1;  --  65_536 - 1
+      --  --  A0B.STM32F401.SVD.TIM.TIM10_Periph.PSC.PSC := 65_535;  --  65_536 - 1
+      --    --  A0B.Types.Unsigned_16 (Timer_Peripheral_Frequency / Prescaler_Divider);
+      --
+      --  declare
+      --     Aux : A0B.STM32F401.SVD.TIM.CCMR1_Output_Register_2 :=
+      --       A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output;
+      --
+      --  begin
+      --     Aux.CC1S  := 2#00#;  --  CC1 channel is configured as output.
+      --  --  --  Output Compare 1 fast enable
+      --  --  OC1FE         : Boolean := False;
+      --  --  --  Output Compare 1 preload enable
+      --  --  OC1PE         : Boolean := False;
+      --     Aux.OC1M  := 2#110#;
+      --     --  PWM mode 1 - Channel 1 is active as long as TIMx_CNT < TIMx_CCR1
+      --     --  else inactive.
+      --
+      --     A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output := Aux;
+      --  end;
+      --
+      --  declare
+      --     Aux : A0B.STM32F401.SVD.TIM.CCER_Register_3 :=
+      --       A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER;
+      --
+      --  begin
+      --  --  --  Capture/Compare 1 output enable
+      --  --  CC1E          : Boolean := False;
+      --     Aux.CC1P := False;  --  OC1 active high
+      --
+      --     --  --  unspecified
+      --  --  Reserved_2_2  : A0B.Types.SVD.Bit := 16#0#;
+      --  --  --  Capture/Compare 1 output Polarity
+      --  --  CC1NP         : Boolean := False;
+      --
+      --     A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER := Aux;
+      --  end;
+      --
+      --  --  --  Enable update interrupt
+      --  --
+      --  --  declare
+      --  --     Aux : DIER_Register_3 := TIM11_Periph.DIER;
+      --  --
+      --  --  begin
+      --  --     Aux.CC1IE := False;  --  CC1 interrupt disabled
+      --  --     Aux.UIE   := True;   --  Update interrupt enabled
+      --  --
+      --  --     TIM11_Periph.DIER := Aux;
+      --  --  end;
+      --  --
+      --  --  A0B.ARMv7M.NVIC_Utilities.Clear_Pending
+      --  --    (A0B.STM32F401.TIM1_TRG_COM_TIM11);
+      --  --  A0B.ARMv7M.NVIC_Utilities.Enable_Interrupt
+      --  --    (A0B.STM32F401.TIM1_TRG_COM_TIM11);
+      --
+      --  ENA_Pin.Configure_Alternative_Function
+      --    (Line  => A0B.STM32F401.TIM_Lines.TIM10_CH1,
+      --     Mode  => A0B.STM32F401.GPIO.Push_Pull,
+      --     Speed => A0B.STM32F401.GPIO.Very_High,
+      --     Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      --  IN1_Pin.Configure_Output
+      --    (Mode  => A0B.STM32F401.GPIO.Push_Pull,
+      --     Speed => A0B.STM32F401.GPIO.Very_High,
+      --     Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      --  IN2_Pin.Configure_Output
+      --    (Mode  => A0B.STM32F401.GPIO.Push_Pull,
+      --     Speed => A0B.STM32F401.GPIO.Very_High,
+      --     Pull  => A0B.STM32F401.GPIO.Pull_Up);
+      --
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.ARR.ARR   := Cycle - 1;
+      --  --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCR1.CCR1 := 512;
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.EGR.UG    := True;
+      --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCER.CC1E := True;
+      --  --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN   := True;
+      --
+      --  IN1_Pin.Set (False);
+      --  IN2_Pin.Set (False);
+   end Initialize_TIM3;
 
    -----------------
    -- Process_ADC --
@@ -560,11 +793,11 @@ package body DC_Motor_L298.Application is
             when 'f' | 'F' =>
                Set_State (Forward);
 
-            when 'b' | 'B' =>
+            when 'r' | 'R' =>
                Set_State (Backward);
 
-            when 's' | 'S' =>
-               Set_State (Stop);
+            when 'b' | 'B' =>
+               Set_State (Break);
 
             when 'o' | 'O' =>
                Set_State (Off);
@@ -648,7 +881,10 @@ package body DC_Motor_L298.Application is
    --------------
 
    procedure Set_Duty (To : Integer) is
+      use A0B.STM32F401.SVD.TIM;
       use type A0B.Types.Unsigned_32;
+
+      TIM : TIM3_Peripheral renames TIM3_Periph;
 
       CCR : A0B.Types.Unsigned_32;
 
@@ -661,8 +897,8 @@ package body DC_Motor_L298.Application is
          CCR := CCR - 1;
       end if;
 
-      A0B.STM32F401.SVD.TIM.TIM10_Periph.CCR1.CCR1 :=
-        A0B.Types.Unsigned_16 (CCR);
+      TIM.CCR1.CCR1_L := A0B.Types.Unsigned_16 (CCR);
+      TIM.CCR2.CCR2_L := A0B.Types.Unsigned_16 (CCR);
    end Set_Duty;
 
    ---------------
@@ -670,34 +906,49 @@ package body DC_Motor_L298.Application is
    ---------------
 
    procedure Set_State (To : State_Kind) is
+      use A0B.STM32F401.SVD.TIM;
+
+      TIM : TIM3_Peripheral renames TIM3_Periph;
+
    begin
       State := To;
 
       case State is
          when Forward =>
-            IN1_Pin.Set (True);
-            IN2_Pin.Set (False);
+            TIM.CCMR1_Output.OC1M := 2#110#;  --  110: PWM mode 1
+            TIM.CCMR1_Output.OC2M := 2#100#;  --  100: Force inactive level
             Set_Duty (Duty);
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#110#;
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := True;
+            --  IN1_Pin.Set (True);
+            --  IN2_Pin.Set (False);
+            --  Set_Duty (Duty);
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#110#;
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := True;
 
          when Backward =>
-            IN1_Pin.Set (False);
-            IN2_Pin.Set (True);
+            TIM.CCMR1_Output.OC1M := 2#100#;  --  100: Force inactive level
+            TIM.CCMR1_Output.OC2M := 2#110#;  --  110: PWM mode 1
             Set_Duty (Duty);
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#110#;
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := True;
+            --  Set_Duty (Duty);
+            --  IN1_Pin.Set (False);
+            --  IN2_Pin.Set (True);
+            --  Set_Duty (Duty);
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#110#;
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := True;
 
-         when Stop =>
-            IN1_Pin.Set (True);
-            IN2_Pin.Set (True);
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#101#;
+         when Break =>
+            TIM.CCMR1_Output.OC1M := 2#101#;  --  101: Force active level
+            TIM.CCMR1_Output.OC2M := 2#101#;  --  101: Force active level
+            --  IN1_Pin.Set (True);
+            --  IN2_Pin.Set (True);
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#101#;
 
          when Off =>
-            IN1_Pin.Set (False);
-            IN2_Pin.Set (False);
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#100#;
-            A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := False;
+            TIM.CCMR1_Output.OC1M := 2#100#;  --  100: Force inactive level
+            TIM.CCMR1_Output.OC2M := 2#100#;  --  100: Force inactive level
+            --  IN1_Pin.Set (False);
+            --  IN2_Pin.Set (False);
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CCMR1_Output.OC1M := 2#100#;
+            --  A0B.STM32F401.SVD.TIM.TIM10_Periph.CR1.CEN := False;
       end case;
    end Set_State;
 end DC_Motor_L298.Application;
