@@ -33,6 +33,8 @@ package body DC_Motor_L298.Application is
      renames A0B.STM32F401.GPIO.PIOA.PA1;
    Voltage_B_Pin : A0B.STM32F401.GPIO.GPIO_Line
      renames A0B.STM32F401.GPIO.PIOA.PA2;
+   Position_Pin  : A0B.STM32F401.GPIO.GPIO_Line
+     renames A0B.STM32F401.GPIO.PIOA.PA3;
 
    type State_Kind is (Forward, Backward, Stop, Off);
 
@@ -63,6 +65,7 @@ package body DC_Motor_L298.Application is
       Current   : A0B.Types.Unsigned_16;
       Voltage_A : A0B.Types.Unsigned_16;
       Voltage_B : A0B.Types.Unsigned_16;
+      Position  : A0B.Types.Unsigned_16;
    end record;
 
    ADC_Data : array (1 .. 2_000) of Data with Export;
@@ -108,6 +111,14 @@ package body DC_Motor_L298.Application is
 
          ADC_Data (J).Voltage_B := ADC1_Periph.DR.DATA;
 
+         ADC1_Periph.SQR3.SQ.Arr (1) := 2#011#;
+         ADC1_Periph.CR2.SWSTART := True;
+
+         while not ADC1_Periph.SR.EOC loop
+            null;
+         end loop;
+
+         ADC_Data (J).Position := ADC1_Periph.DR.DATA;
       end loop;
 
       Period := A0B.Time.Clock - Start;
@@ -356,6 +367,7 @@ package body DC_Motor_L298.Application is
       Current_Pin.Configure_Analog;
       Voltage_A_Pin.Configure_Analog;
       Voltage_B_Pin.Configure_Analog;
+      Position_Pin.Configure_Analog;
    end Initialize_ADC;
 
    -----------------
@@ -461,6 +473,18 @@ package body DC_Motor_L298.Application is
          end if;
 
          Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J).Voltage_B));
+      end loop;
+
+      Console.New_Line;
+      Console.New_Line;
+      Console.Put_Line ("Position");
+
+      for J in ADC_Data'Range loop
+         if (J - 1) mod 25 = 0 then
+            Console.New_Line;
+         end if;
+
+         Console.Put (A0B.Types.Unsigned_16'Image (ADC_Data (J).Position));
       end loop;
 
       Console.New_Line;
