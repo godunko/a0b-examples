@@ -24,5 +24,6 @@ a0b_timer = "*"
 light_blackpill_stm32f401 = "*"
 
 [[pins]]
-a0b_spi = { path='../../../../hexapod/subprojects/a0b-spi' }
-a0b_stm32f401_usart = { path='../../../../hexapod/subprojects/a0b-stm32f401-usart' }
+a0b_spi = { path='../../../a0b-spi' }
+a0b_stm32f401_usart = { path='../../../a0b-stm32f401-usart' }
+a0b_stm32f401_gpio = { path='../../../a0b-stm32f401-gpio' }
