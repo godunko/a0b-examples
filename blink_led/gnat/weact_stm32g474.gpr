@@ -1,0 +1,39 @@
+--
+--  Copyright (C) 2025, Vadim Godunko <vgodunko@gmail.com>
+--
+--  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+--
+
+with "../weact_stm32g474/config/blink_led_weact_stm32g474_config.gpr";
+
+with "a0b_common.gpr";
+with "light_weact_stm32g474";
+
+project WeAct_STM32G474 is
+
+   for Target use Light_WeAct_STM32G474'Target;
+   for Runtime use Light_WeAct_STM32G474'Runtime;
+
+   for Main use ("blink_led-driver.adb");
+
+   for Source_Dirs use
+     ("../source",
+      "../source/weact_stm32g474");
+   for Object_Dir use "../.objs/" & A0B_Common.Object_Dir_Suffix & "/weact_stm32g474";
+   for Exec_Dir use "../bin";
+
+   package Compiler is
+      for Switches ("Ada") use A0B_Common.Compiler_Switches_Ada;
+   end Compiler;
+
+   package Builder is
+      for Executable ("blink_led-driver.adb") use "weact_stm32g474.elf";
+   end Builder;
+
+   package Linker is
+      for Switches ("Ada") use
+        Light_WeAct_STM32G474.Linker_Switches
+         & ("-Wl,--gc-sections");
+   end Linker;
+
+end WeAct_STM32G474;

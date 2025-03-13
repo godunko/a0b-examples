@@ -1,0 +1,35 @@
+name = "blink_led_weact_stm32g474"
+description = "Blink LED demo for WeAct STM32G474"
+version = "0.1.0"
+website = "https://github.com/godunko/a0b-examples"
+
+authors = ["Vadim Godunko"]
+maintainers = ["Vadim Godunko <vgodunko@gmail.com>"]
+maintainers-logins = ["godunko"]
+licenses = "Apache-2.0 WITH LLVM-exception"
+tags = ["a0b", "embedded", "demo", "weact", "stm32g474"]
+
+project-files = ["../gnat/weact_stm32g474.gpr"]
+
+[configuration]
+generate_ada = false
+generate_c = false
+generate_gpr = true
+
+[[depends-on]]
+a0b_armv7m_systick_clock_timer = "*"
+a0b_stm32g474_gpio = "*"
+a0b_timer = "*"
+light_weact_stm32g474 = "*"
+
+[[pins]]
+a0b_armv7m = { path='../../../a0b-armv7m' }
+a0b_armv7m_systick_clock_timer = { path='../../../a0b-armv7m-systick_clock_timer' }
+a0b_base = { path='../../../a0b-base' }
+a0b_gpio = { path='../../../a0b-gpio' }
+a0b_stm32f2_generic_exti = { path='../../../a0b-stm32f2-generic_exti' }
+a0b_stm32f2_generic_gpio = { path='../../../a0b-stm32f2-generic_gpio' }
+a0b_stm32g4 = { path='../../../a0b-stm32g4' }
+a0b_stm32g474 = { path='../../../a0b-stm32g474' }
+a0b_stm32g474_gpio = { path='../../../a0b-stm32g474-gpio' }
+light_weact_stm32g474 = { path='../../../light-startup/weact_stm32g474' }
