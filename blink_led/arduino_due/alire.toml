@@ -1,6 +1,6 @@
 name = "blink_led_arduino_due"
 description = "Blink LED demo for Arduino Due"
-version = "0.1.0"
+version = "0.2.0-dev"
 website = "https://github.com/godunko/a0b-examples"
 
 authors = ["Vadim Godunko"]
