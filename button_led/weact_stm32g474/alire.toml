@@ -1,6 +1,6 @@
 name = "button_led_weact_stm32g474"
 description = "Key/LED demo for WeAct STM32G474"
-version = "0.1.0-dev"
+version = "0.1.0"
 website = "https://github.com/godunko/a0b-examples"
 
 authors = ["Vadim Godunko"]
